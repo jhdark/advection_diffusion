@@ -1,0 +1,32 @@
+version: 1
+project:
+  title: Advection diffusion
+  subtitle: How far does the rabbit hole go?
+  license:
+    content: CC-BY-SA-3.0
+    code: MIT
+  subject: Paper
+  venue:
+    title: For future reference
+  open_access: true
+  github: https://github.com/jhdark/advection_diffusion
+  date: 2026-04-15
+  authors:
+    - name: James Dark
+      orcid: 0000-0002-0456-7210
+      corresponding: true
+      email: darkj385@mit.edu
+      github: jhdark
+      affiliation: psfc
+  affiliations:
+    - id: psfc
+      institution: MIT Plasma Science and Fusion Center
+      address: 176 Albany St
+      city: Cambridge
+      region: Massachusetts
+      country: United States
+      postal_code: 02139
+  banner: ./images/banner.png
+site:
+  title: 'Advection diffusion'
+  template: article-theme
