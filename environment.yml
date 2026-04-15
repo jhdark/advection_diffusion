@@ -1,0 +1,14 @@
+name: adv-diff
+channels:
+  - conda-forge
+dependencies:
+  - fenics-dolfinx
+  - python-gmsh
+  - numpy
+  - matplotlib
+  - ipykernel
+  - jupytext
+  - nodejs
+  - pip>=20.1
+  - pip:
+      - "mystmd"
