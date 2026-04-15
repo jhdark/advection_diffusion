@@ -1,13 +1,13 @@
 version: 1
 project:
-  title: Advection diffusion
-  subtitle: How far does the rabbit hole go?
+  title: DG Methods for Advection-Diffusion in DOLFINx
+  subtitle: A reference document for implementing advection-diffusion in FESTIM
   license:
     content: CC-BY-SA-3.0
     code: MIT
-  subject: Paper
+  subject: Reference Notes
   venue:
-    title: For future reference
+    title: FESTIM Development — Advection-Diffusion DG Implementation
   open_access: true
   github: https://github.com/jhdark/advection_diffusion
   date: 2026-04-15
