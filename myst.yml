@@ -27,6 +27,10 @@ project:
       country: United States
       postal_code: 02139
   banner: ./images/banner.png
+  toc:
+    - file: paper
+    - file: notebooks/mwe_1.ipynb
+    - file: notebooks/mwe_2.ipynb
 site:
   title: 'Advection diffusion'
   template: article-theme
