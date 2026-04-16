@@ -1,7 +1,7 @@
 # DG Methods for Advection-Diffusion in DOLFINx
 
 [![Made with MyST](https://img.shields.io/badge/made%20with-myst-orange)](https://curve.space/examples/pixels)
-[![DOI](https://zenodo.org/badge/1211554310.svg)](https://doi.org/10.5281/zenodo.19615611)
+[![DOI](https://zenodo.org/badge/1211554310.svg)](https://doi.org/10.5281/zenodo.19615612)
 
 Reference notes for implementing a discontinuous Galerkin (DG) advection-diffusion solver in [FESTIM](https://github.com/festim-dev/FESTIM) using [DOLFINx](https://github.com/FEniCS/dolfinx). The document covers the DG weak formulation (SIPG for diffusion, upwind flux for advection), boundary condition treatment, and verification via the Method of Manufactured Solutions (MMS).
 
