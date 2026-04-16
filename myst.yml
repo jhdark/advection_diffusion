@@ -34,3 +34,4 @@ project:
 site:
   title: 'Advection diffusion'
   template: article-theme
+  favicon: images/festim_logo_symbol.svg
