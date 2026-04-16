@@ -9,6 +9,7 @@ project:
   venue:
     title: FESTIM Development — Advection-Diffusion DG Implementation
   open_access: true
+  doi: 10.5281/zenodo.19615612
   github: https://github.com/jhdark/advection_diffusion
   date: 2026-04-15
   authors:
