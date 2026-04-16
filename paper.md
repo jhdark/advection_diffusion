@@ -17,54 +17,41 @@ export:
 
 ## The Advection-Diffusion Equation
 
-We consider the steady-state advection-diffusion equation for a scalar quantity $u$ (e.g. concentration or temperature):
+We consider the steady-state advection-diffusion equation for a scalar quantity $u$, in this case in m$^{-3}$:
 
 $$
 \nabla \cdot (\mathbf{w} u) - \nabla \cdot (D \nabla u) = f \quad \text{in } \Omega
 $$
 
-where:
-- $\mathbf{w}$ is the advective velocity field (prescribed, e.g. from OpenFOAM)
-- $D > 0$ is the diffusion coefficient
-- $f$ is a source term
-- $\Omega \subset \mathbb{R}^d$ is the computational domain
+where $\mathbf{w}$ is a prescribed advective velocity field in m$\,$s$^{-1}$, $D$ is the diffusion coefficient in m$^{2}\,$s$^{-1}$, $f$ is a source term in m$^{2}\,$s$^{-1}$, and $\Omega \subset \mathbb{R}^d$ is the computational domain.
 
-The boundary $\partial\Omega$ is decomposed according to the physics. For diffusion: $\partial\Omega = \Gamma_D \cup \Gamma_N \cup \Gamma_R$. For advection, the boundary is split by the sign of the normal flux:
+The relative importance of the two transport mechanisms is captured by the cell Péclet number:
 
 $$
-\Gamma_\text{in} = \{\mathbf{x} \in \partial\Omega : \mathbf{w} \cdot \mathbf{n} < 0\}, \quad
-\Gamma_\text{out} = \{\mathbf{x} \in \partial\Omega : \mathbf{w} \cdot \mathbf{n} > 0\}, \quad
-\Gamma_w = \{\mathbf{x} \in \partial\Omega : \mathbf{w} \cdot \mathbf{n} = 0\}
+\text{Pe} = \frac{|\mathbf{w}| h}{2D}
 $$
 
-## The Péclet Number
+where $h$ is a local mesh size. When $\text{Pe} \ll 1$ diffusion dominates and the problem is essentially elliptic; when $\text{Pe} \gg 1$ advection dominates and the solution can develop sharp internal layers and boundary layers.
 
-The local cell Péclet number characterises the relative strength of advection to diffusion:
+## Numerical Challenges and the Case for DG
 
-$$
-\text{Pe}_h = \frac{|\mathbf{w}| h}{2D}
-$$
+Standard continuous Galerkin (CG) finite element methods work well for the pure diffusion limit, but suffer from spurious non-physical oscillations as $\text{Pe}$ grows. These oscillations arise because CG lacks any intrinsic upwinding mechanism, as the scheme treats upwind and downwind information symmetrically, even though advection is inherently directional.
 
-where $h$ is a local mesh size. It governs which physical mechanism dominates:
+Several stabilisation strategies have been developed to address this within the CG framework:
 
-| Regime | $\text{Pe}_h$ | Character |
-|---|---|---|
-| Diffusion-dominated | $\ll 1$ | Smooth, elliptic |
-| Mixed | $\sim 1$ | Transition |
-| Advection-dominated | $\gg 1$ | Transport-like, potential for spurious oscillations |
+- **Isotropic artificial diffusion** adds a scalar diffusion term $D_\text{art} = \delta h |\mathbf{w}|$ uniformly in all directions, where $\delta$ is a dimensionless tuning parameter and $h$ is the local mesh size. It is simple to implement but *inconsistent*, as the added diffusion modifies the original problem, introducing cross-stream smearing and reducing accuracy, particularly near sharp layers [(COMSOL, 2020)](https://www.comsol.com/blogs/understanding-stabilization-methods).
+- **Streamline-upwind Petrov–Galerkin (SUPG)** and **Galerkin least-squares (GLS)** are *consistent* stabilisations: they add residual-weighted terms that introduce numerical diffusion strictly along the streamline direction. Because the added terms vanish when the exact solution is substituted, the convergence order is preserved. These are generally preferred over isotropic diffusion.
 
-The appropriate numerical formulation depends strongly on $\text{Pe}_h$.
+These methods can be effective, but all require tuning parameters, add complexity to the formulation, and are fundamentally workarounds for a framework not designed with advection-dominated transport in mind.
 
-## Discontinuous Galerkin Methods
+Discontinuous Galerkin (DG) methods address the root cause rather than patching the symptom. Because the approximation space allows inter-element discontinuities, information can be passed between elements through numerical fluxes, and the choice of flux naturally encodes upwinding for the advection term. This gives DG several structural advantages:
 
-Standard continuous Galerkin (CG) methods can produce spurious oscillations when $\text{Pe}_h \gg 1$. Discontinuous Galerkin (DG) methods offer several advantages:
+- **Natural upwinding**: the upwind flux for advection is a direct consequence of the DG framework, not an add-on stabilisation.
+- **Local conservation**: the flux balance is satisfied element-wise, which matters for transport quantities.
+- **Flexibility in boundary conditions**: all conditions are imposed weakly through face integrals, giving a uniform treatment.
+- **High-order accuracy**: high-degree polynomial spaces can be used on unstructured meshes without additional complications.
 
-- **Upwinding** is natural for the advection term via numerical flux choices
-- **Local conservation** is satisfied element-wise
-- **High-order accuracy** on unstructured meshes
-- **Flexibility** in handling complex boundary conditions weakly
-
-The price is a larger global stiffness matrix (more degrees of freedom for the same mesh) and the need to choose penalty parameters carefully.
+The trade-off is a larger global system (DG has more degrees of freedom than CG for the same mesh) and the need to select a penalty parameter for the diffusion term carefully. Both are manageable in practice.
 
 ## Derivation of the DG Weak Form
 
@@ -122,8 +109,8 @@ $$
 
 For a smooth solution the normal flux is continuous across interior faces, so the $\llbracket D\nabla u \rrbracket$ term vanishes by consistency. Subtracting from the element-wise bulk terms gives a consistent but non-symmetric form. SIPG adds two further face contributions to restore symmetry and coercivity:
 
-1. **Symmetry**: $-\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s$ — zero for the exact solution (consistency preserved); symmetrises the bilinear form.
-2. **Penalty**: $+\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \dfrac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s$ — penalises inter-element jumps, restoring coercivity.
+1. **Symmetry**: $-\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s$, which is zero for the exact solution (consistency preserved) and symmetrises the bilinear form.
+2. **Penalty**: $+\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \dfrac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s$, which penalises inter-element jumps and restores coercivity.
 
 The interior SIPG bilinear form is therefore:
 
@@ -196,7 +183,7 @@ $$
 -\int_{\Gamma_N} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s \longrightarrow -\int_{\Gamma_N} g_N\, v\, \mathrm{d}s
 $$
 
-The homogeneous case $g_N = 0$ is the natural condition — no modification is required.
+The homogeneous case $g_N = 0$ is the natural condition and requires no modification.
 
 **Robin** ($D\nabla u \cdot \mathbf{n} = g_R - \beta u$ on $\Gamma_R$, $\beta \geq 0$):
 
@@ -232,7 +219,7 @@ This is the natural outflow condition for DG upwinding.
 
 **Wall / Symmetry** ($\mathbf{w} \cdot \mathbf{n} = 0$ on $\Gamma_w$):
 
-No advective flux crosses the boundary. The face integral vanishes — no term is added for either walls or symmetry planes.
+No advective flux crosses the boundary. The face integral vanishes, so no term is added for either walls or symmetry planes.
 
 ## The Complete Weak Formulation
 
