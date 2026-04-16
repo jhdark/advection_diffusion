@@ -1,0 +1,42 @@
+name: Test Notebooks
+
+on: [pull_request, push]
+
+jobs:
+  test-notebooks:
+    name: Execute example notebooks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Conda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: adv-diff
+        miniforge-version: latest
+        channels: conda-forge
+
+    - name: Install dependencies
+      shell: bash -l {0}
+      run: |
+        conda install -c conda-forge \
+          fenics-dolfinx=0.10.0 \
+          numpy \
+          matplotlib \
+          jupyter \
+          nbconvert \
+          ipykernel
+
+    - name: Execute notebooks
+      shell: bash -l {0}
+      run: |
+        jupyter nbconvert --to notebook --execute \
+          --ExecutePreprocessor.timeout=600 \
+          --ExecutePreprocessor.kernel_name=python3 \
+          notebooks/mwe_1.ipynb
+        jupyter nbconvert --to notebook --execute \
+          --ExecutePreprocessor.timeout=600 \
+          --ExecutePreprocessor.kernel_name=python3 \
+          notebooks/mwe_2.ipynb
