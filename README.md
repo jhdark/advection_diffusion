@@ -1,8 +1,7 @@
 # Advection diffusion
 
-_James Dark_ - [How far does the rabbit hole go?](http://library.seg.org/doi/abs/10.1190/tle35080703.1)
-
 [![Made with MyST](https://img.shields.io/badge/made%20with-myst-orange)](https://curve.space/examples/pixels)
+[![DOI](https://zenodo.org/badge/1211554310.svg)](https://doi.org/10.5281/zenodo.19615611)
 
 For working locally:
 
