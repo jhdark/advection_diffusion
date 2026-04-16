@@ -18,6 +18,21 @@ project:
       email: darkj385@mit.edu
       github: jhdark
       affiliation: psfc
+    - name: Jørgen Dokken
+      orcid: 0000-0001-6489-8858
+      corresponding: false
+      github: jorgensd
+      affiliation: simula
+    - name: Joseph Dean
+      orcid: 0000-0001-7499-3373
+      corresponding: false
+      github: jpdean
+      affiliation: cam
+    - name: Rémi Delaporte-Mathurin
+      orcid: 0000-0003-1064-8882
+      corresponding: false
+      github: RemDelaporteMathurin
+      affiliation: psfc
   affiliations:
     - id: psfc
       institution: MIT Plasma Science and Fusion Center
@@ -26,6 +41,18 @@ project:
       region: Massachusetts
       country: United States
       postal_code: 02139
+    - id: simula
+      institution: Simula Research Laboratory
+      address: Kristian Augusts gate 23
+      city: Oslo
+      country: Norway
+      postal_code: 0164
+    - id: cam
+      institution: University of Cambridge, Department of Engineering
+      address: Trumpington St
+      city: Cambridge
+      country: United Kingdom
+      postal_code: CB2 1PZ
   banner: ./images/banner.png
   toc:
     - file: paper
@@ -34,4 +61,5 @@ project:
 site:
   title: 'Advection diffusion'
   template: article-theme
-  favicon: images/festim_logo_symbol.svg
+  options:
+    favicon: images/festim_logo_symbol.svg
