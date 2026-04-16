@@ -1,7 +1,7 @@
 version: 1
 project:
   title: DG Methods for Advection-Diffusion in DOLFINx
-  subtitle: A reference document for implementing advection-diffusion in FESTIM
+  subtitle: A mild introduction to suffering | How far does the rabbit hole go?
   license:
     content: CC-BY-SA-3.0
     code: MIT
