@@ -107,7 +107,7 @@ $$
 \end{align}
 $$
 
-For a smooth solution the normal flux is continuous across interior faces, so the $\llbracket D\nabla u \rrbracket$ term vanishes by consistency. Subtracting from the element-wise bulk terms gives a consistent but non-symmetric form. SIPG adds two further face contributions to restore symmetry and coercivity:
+In the continuous setting the normal flux of a smooth solution is single-valued, so $\llbracket D\nabla u \rrbracket = 0$ and the second interior face term can be dropped from the bilinear form without compromising consistency, since it vanishes exactly when the true solution is substituted. In the discrete setting $u_h$ is genuinely discontinuous and $\llbracket D\nabla u_h \rrbracket$ is not zero in general, so omitting this term does modify the discrete system; stability is recovered through the penalty contribution introduced below, rather than by any smoothness of $u_h$. Subtracting the remaining single-valued flux term from the element-wise bulk integrals gives a consistent but non-symmetric form. SIPG adds two further face contributions to restore symmetry and coercivity:
 
 1. **Symmetry**: $-\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s$, which is zero for the exact solution (consistency preserved) and symmetrises the bilinear form.
 2. **Penalty**: $+\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \dfrac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s$, which penalises inter-element jumps and restores coercivity.
@@ -146,7 +146,11 @@ $$
 (\mathbf{w} \cdot \mathbf{n})\, u_\text{up} = \langle \mathbf{w} u \rangle \cdot \mathbf{n} + \tfrac{1}{2}|\mathbf{w} \cdot \mathbf{n}|\, \llbracket u \rrbracket
 $$
 
-The face integral then becomes $(\mathbf{w}\cdot\mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket$, where $\llbracket v \rrbracket = v_0 - v_1$ is the oriented scalar jump of the test function. The interior advection contribution is:
+The face integral then becomes $(\mathbf{w}\cdot\mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket$, where $\llbracket v \rrbracket = v_0 - v_1$ is the oriented scalar jump of the test function.
+
+The compact identity above assumes that $\mathbf{w}\cdot\mathbf{n}$ is single-valued on $F$, i.e. $\llbracket \mathbf{w}\cdot\mathbf{n} \rrbracket = 0$. This holds whenever $\mathbf{w}$ is prescribed analytically or is represented in a continuous finite element space, but it fails in general for a velocity field interpolated from an external solver into a DG space. The practical consequences, and how to handle them, are discussed in the section on coupling with an external velocity field.
+
+The interior advection contribution is:
 
 $$
 a_\text{adv}^\text{int}(u, v) = -\sum_K \int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x
@@ -254,6 +258,48 @@ $$
 &\quad - \int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s
 \end{split}
 $$
+
+## Coupling with an External Velocity Field
+
+The formulation above assumes a velocity field that is either prescribed analytically or represented continuously, divergence-free in the discrete sense, and exactly tangential on walls. When $\mathbf{w}$ is instead supplied by an external solver such as OpenFOAM, each of these assumptions relaxes, and the face integrals need care. The issues divide into three groups.
+
+### Single-valued face flux
+
+OpenFOAM stores its velocity as cell-centred values together with a set of face-normal mass fluxes $\phi_F = \int_F (\rho \mathbf{w}) \cdot \mathbf{n}\,\mathrm{d}s$ that are, by construction, single-valued per face and conservative at the discrete level. Interpolating the cell-centred velocity into a DG space on the transport mesh and reconstructing $\mathbf{w}\cdot\mathbf{n}$ from it loses both properties: the two sides of an interior face disagree, and $\llbracket \mathbf{w}\cdot\mathbf{n} \rrbracket \ne 0$.
+
+The compact identity used for the interior advection integral then no longer collapses to an upwind flux. Two equivalent fixes are available:
+
+1. Replace the compact form by an explicit upwind flux that does not rely on single-valuedness of $\mathbf{w}\cdot\mathbf{n}$:
+   $$
+   \hat{f}_\text{adv} = \tfrac{1}{2} \bigl( \mathbf{w}_0\cdot\mathbf{n}\, u_0 + \mathbf{w}_1\cdot\mathbf{n}\, u_1 \bigr)
+   + \tfrac{1}{2} \bigl| \langle \mathbf{w}\rangle\cdot\mathbf{n} \bigr|\, \llbracket u \rrbracket.
+   $$
+2. Transfer the face-flux field $\phi_F$ directly from OpenFOAM and use it as the advective transport coefficient on each face, replacing $\mathbf{w}\cdot\mathbf{n}$ by $\phi_F / (\rho\, |F|)$ (or by $\phi_F / |F|$ if a volumetric flux is used). The upwind branch is then selected on the sign of $\phi_F$. This is the option that preserves OpenFOAM's flux conservation and is generally preferred.
+
+In either case the boundary face integrals $\int_{\Gamma_\text{in/out}}$ must use the same face flux, not the reconstructed $\mathbf{w}\cdot\mathbf{n}$, so that the inflow and outflow splits remain consistent.
+
+### Discrete divergence
+
+The physical field is divergence-free, but the interpolant $\mathbf{w}_h$ on the transport mesh is not, in general. The two forms
+
+$$
+\nabla\cdot(\mathbf{w} u) \quad\text{and}\quad \mathbf{w}\cdot\nabla u
+$$
+
+differ by $(\nabla\cdot\mathbf{w})\, u$, which is zero at the continuum level but acts as a spurious source when $\nabla\cdot\mathbf{w}_h \ne 0$. Two options are available:
+
+- Use the skew-symmetric or non-conservative form $\mathbf{w}\cdot\nabla u$ when deriving the weak form. This trades local conservation for reduced sensitivity to interpolation error in $\mathbf{w}$ and is the pragmatic choice when the velocity is known only approximately.
+- Project $\mathbf{w}$ onto a divergence-conforming space such as Raviart-Thomas or BDM, which preserves $\nabla\cdot\mathbf{w}_h = 0$ at the discrete level. This keeps the conservative form valid but adds a projection step and couples the transport mesh more tightly to the flow discretisation.
+
+When the face-flux form (option 2 above) is used, conservation is enforced through $\phi_F$ directly and this divergence mismatch does not arise in the same way.
+
+### Wall boundary flux
+
+On no-slip or symmetry walls the physical condition is $\mathbf{w}\cdot\mathbf{n} = 0$, and the corresponding face integral vanishes. An interpolated velocity field rarely satisfies this exactly: a small residual normal component acts as a spurious inflow or outflow, with the sign and magnitude depending on the interpolation. The safest treatment is to enforce $\mathbf{w}\cdot\mathbf{n} = 0$ explicitly on wall facets, either by masking the integrand or by using the face-flux field $\phi_F$, which is identically zero on OpenFOAM wall patches and therefore introduces no leak.
+
+### Mesh transfer
+
+All of the above assumes that values defined on the OpenFOAM mesh have been transferred to the transport mesh. Mesh-to-mesh interpolation is itself a source of error, particularly at boundaries and in regions with large velocity gradients, and its treatment is outside the scope of this note. For the purposes of this formulation, we assume that either a face-flux field $\phi_F$ or a cell-centred velocity has been made available on the transport mesh by a method appropriate to the coupling.
 
 ## Further Reading
 
