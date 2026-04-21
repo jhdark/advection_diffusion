@@ -15,19 +15,9 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: adv-diff
+        environment-file: environment.yml
         miniforge-version: latest
         channels: conda-forge
-
-    - name: Install dependencies
-      shell: bash -l {0}
-      run: |
-        conda install -c conda-forge \
-          fenics-dolfinx=0.10.0 \
-          numpy \
-          matplotlib \
-          jupyter \
-          nbconvert \
-          ipykernel
 
     - name: Execute notebooks
       shell: bash -l {0}

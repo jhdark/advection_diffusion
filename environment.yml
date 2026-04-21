@@ -8,6 +8,7 @@ dependencies:
   - matplotlib
   - ipykernel
   - jupytext
+  - nbconvert
   - nodejs
   - pip>=20.1
   - meshio
