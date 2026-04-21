@@ -10,5 +10,7 @@ dependencies:
   - jupytext
   - nodejs
   - pip>=20.1
+  - meshio
   - pip:
       - "mystmd"
+      - pyvista
