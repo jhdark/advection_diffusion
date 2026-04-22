@@ -59,6 +59,7 @@ project:
     - file: paper
     - file: notebooks/mwe_1.ipynb
     - file: notebooks/mwe_2.ipynb
+    - file: notebooks/mwe_3.ipynb
 site:
   title: 'Advection diffusion'
   template: article-theme
