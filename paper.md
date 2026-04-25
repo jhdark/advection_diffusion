@@ -17,13 +17,15 @@ export:
 
 ## The Advection-Diffusion Equation
 
-We consider the steady-state advection-diffusion equation for a scalar quantity $u$, in this case in m$^{-3}$:
+Advection-diffusion equations describe how a quantity is transported through a medium by two competing mechanisms: advection (bulk transport carried along by a flow) and diffusion (spreading down a concentration gradient). In this work the quantity of interest is a species concentration in a fluid, specifically hydrogen, but the same equation governs heat transport, pollutant dispersion, and many other physical problems.
+
+We consider the steady-state form for a scalar quantity $u$ (m$^{-3}$):
 
 $$
 \nabla \cdot (\mathbf{w} u) - \nabla \cdot (D \nabla u) = f \quad \text{in } \Omega
 $$
 
-where $\mathbf{w}$ is a prescribed advective velocity field in m$\,$s$^{-1}$, $D$ is the diffusion coefficient in m$^{2}\,$s$^{-1}$, $f$ is a source term in m$^{2}\,$s$^{-1}$, and $\Omega \subset \mathbb{R}^d$ is the computational domain.
+where $\mathbf{w}$ is a prescribed advective velocity field (m$\,$s$^{-1}$), $D$ is the diffusion coefficient (m$^{2}\,$s$^{-1}$), $f$ is a volumetric source term (m$^{-3}\,$s$^{-1}$), and $\Omega \subset \mathbb{R}^d$ is the computational domain.
 
 The relative importance of the two transport mechanisms is captured by the cell Péclet number:
 
@@ -31,7 +33,10 @@ $$
 \text{Pe} = \frac{|\mathbf{w}| h}{2D}
 $$
 
-where $h$ is a local mesh size. When $\text{Pe} \ll 1$ diffusion dominates and the problem is essentially elliptic; when $\text{Pe} \gg 1$ advection dominates and the solution can develop sharp internal layers and boundary layers.
+where $h$ is the local mesh element size. The Péclet number is a dimensionless ratio: large $|\mathbf{w}|$ or small $D$ pushes it up, and small $|\mathbf{w}|$ or large $D$ pushes it down.
+
+- When $\text{Pe} \ll 1$, diffusion dominates. The solution is smooth and the problem behaves like a standard Poisson (diffusion) equation. This type of problem is called *elliptic*, meaning the solution at any point is influenced smoothly by conditions everywhere in the domain, rather than being driven by information propagating in a particular direction.
+- When $\text{Pe} \gg 1$, advection dominates. The solution can develop *sharp layers*, which are thin regions of rapid concentration change near inflow boundaries or obstacles. These are physically real but numerically difficult to resolve accurately.
 
 ## Numerical Challenges and the Case for DG
 
