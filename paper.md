@@ -40,23 +40,23 @@ where $h$ is the local mesh element size. The Péclet number is a dimensionless 
 
 ## Numerical Challenges and the Case for DG
 
-Standard continuous Galerkin (CG) finite element methods work well for the pure diffusion limit, but suffer from spurious non-physical oscillations as $\text{Pe}$ grows. These oscillations arise because CG lacks any intrinsic upwinding mechanism, as the scheme treats upwind and downwind information symmetrically, even though advection is inherently directional.
+Standard continuous Galerkin (CG) finite element methods work well when diffusion dominates, but as the Péclet number grows the solution develops oscillations that are entirely numerical in origin and have no physical meaning. To understand why, it helps to think about how information travels in an advection-dominated problem. If a fluid is moving to the right, the concentration at a point is determined by what is upstream, not downstream. A numerical scheme that respects this directionality is said to have *upwinding*: it biases the treatment of the advection term towards information coming from the upstream direction. Standard CG treats information from both sides of an element face symmetrically, which is appropriate for diffusion but wrong for advection, and this mismatch is what produces the spurious oscillations.
 
-Several stabilisation strategies have been developed to address this within the CG framework:
+Several stabilisation strategies have been developed to recover stability within the CG framework:
 
-- **Isotropic artificial diffusion** adds a scalar diffusion term $D_\text{art} = \delta h |\mathbf{w}|$ uniformly in all directions, where $\delta$ is a dimensionless tuning parameter and $h$ is the local mesh size. It is simple to implement but *inconsistent*, as the added diffusion modifies the original problem, introducing cross-stream smearing and reducing accuracy, particularly near sharp layers [(COMSOL, 2020)](https://www.comsol.com/blogs/understanding-stabilization-methods).
-- **Streamline-upwind Petrov–Galerkin (SUPG)** and **Galerkin least-squares (GLS)** are *consistent* stabilisations: they add residual-weighted terms that introduce numerical diffusion strictly along the streamline direction. Because the added terms vanish when the exact solution is substituted, the convergence order is preserved. These are generally preferred over isotropic diffusion.
+- **Isotropic artificial diffusion** adds an extra diffusion term $D_\text{art} = \delta h |\mathbf{w}|$ uniformly in all directions, where $\delta$ is a dimensionless tuning parameter and $h$ is the local mesh size. It is simple to implement but *inconsistent*: the added term does not vanish even when the exact solution is substituted, meaning it permanently modifies the problem being solved. This introduces cross-stream smearing and reduces accuracy, particularly near sharp layers [(COMSOL, 2020)](https://www.comsol.com/blogs/understanding-stabilization-methods).
+- **Streamline-upwind Petrov–Galerkin (SUPG)** and **Galerkin least-squares (GLS)** are smarter approaches that add numerical diffusion only along the flow direction, not across it. They are *consistent* stabilisations, meaning the extra terms vanish exactly when the true solution is substituted into the equations, so the formal accuracy of the method is preserved. These are generally preferred over isotropic diffusion.
 
 These methods can be effective, but all require tuning parameters, add complexity to the formulation, and are fundamentally workarounds for a framework not designed with advection-dominated transport in mind.
 
-Discontinuous Galerkin (DG) methods address the root cause rather than patching the symptom. Because the approximation space allows inter-element discontinuities, information can be passed between elements through numerical fluxes, and the choice of flux naturally encodes upwinding for the advection term. This gives DG several structural advantages:
+DG methods address the root cause rather than patching the symptom. In DG the approximate solution is allowed to be discontinuous across element boundaries, and information is passed between elements through *numerical flux functions* defined on each shared face. The choice of flux naturally encodes upwinding for the advection term, without any add-on stabilisation. This gives DG several structural advantages:
 
-- **Natural upwinding**: the upwind flux for advection is a direct consequence of the DG framework, not an add-on stabilisation.
-- **Local conservation**: the flux balance is satisfied element-wise, which matters for transport quantities.
-- **Flexibility in boundary conditions**: all conditions are imposed weakly through face integrals, giving a uniform treatment.
+- **Natural upwinding**: upwind information transfer is built directly into the flux formulation, so no stabilisation parameter needs to be tuned for the advection term.
+- **Local conservation**: the flux balance is satisfied element by element, which is important for transport quantities.
+- **Flexible boundary conditions**: all conditions are imposed weakly through face integrals, giving a consistent treatment across different condition types.
 - **High-order accuracy**: high-degree polynomial spaces can be used on unstructured meshes without additional complications.
 
-The trade-off is a larger global system (DG has more degrees of freedom than CG for the same mesh) and the need to select a penalty parameter for the diffusion term carefully. Both are manageable in practice.
+The trade-off is a larger global system (DG has more degrees of freedom than CG for the same mesh) and the need to choose a penalty parameter for the diffusion term carefully. Both are manageable in practice.
 
 ## Derivation of the DG Weak Form
 
