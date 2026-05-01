@@ -177,148 +177,150 @@ Boundary contributions depend on the flow direction and are treated in the next 
 
 ## Boundary Conditions
 
-Each boundary condition modifies the face integrals that arise during integration by parts on $\mathcal{F}_B$.
+Each type of boundary condition enters the formulation by modifying the face integrals on $\mathcal{F}_B$ that appeared during integration by parts. On a boundary face there is only one element, so there is no "other side" to take values from. Instead, the boundary data closes the equations.
 
 ### Diffusion
 
 **Dirichlet** ($u = g_D$ on $\Gamma_D$):
 
-Imposed *weakly* by treating $\Gamma_D$ faces as one-sided SIPG faces, mirroring the interior treatment:
+A Dirichlet condition prescribes the solution value directly. In a classical finite element method this would mean enforcing $u = g_D$ at shared nodes. In DG, where there are no shared nodes between elements, the condition is instead imposed *weakly* through the face integrals, by treating the boundary face exactly like an interior SIPG face but with $g_D$ playing the role of the solution on the outside:
 
 $$
 \begin{align}
-a_\text{diff}^D(u, v) &= - \int_{\Gamma_D} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s
-  - \int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, u\, \mathrm{d}s
-  + \int_{\Gamma_D} \frac{\alpha D}{h}\, u\, v\, \mathrm{d}s \\
-\ell_\text{diff}^D(v) &= - \int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, g_D\, \mathrm{d}s
-  + \int_{\Gamma_D} \frac{\alpha D}{h}\, g_D\, v\, \mathrm{d}s
+a_\text{diff}^D(u, v)
+&= \underbrace{- \int_{\Gamma_D} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s}_{\text{flux consistency}} \\
+&\quad - \underbrace{\int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, u\, \mathrm{d}s}_{\text{symmetry}} \\
+&\quad + \underbrace{\int_{\Gamma_D} \frac{\alpha D}{h}\, u\, v\, \mathrm{d}s}_{\text{penalty}} \\[6pt]
+\ell_\text{diff}^D(v)
+&= \underbrace{- \int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, g_D\, \mathrm{d}s}_{\text{symmetry (data)}} \\
+&\quad + \underbrace{\int_{\Gamma_D} \frac{\alpha D}{h}\, g_D\, v\, \mathrm{d}s}_{\text{penalty (data)}}
 \end{align}
 $$
 
+The bilinear form $a_\text{diff}^D$ contains terms involving the unknown $u$ and goes on the left-hand side; the linear form $\ell_\text{diff}^D$ contains the known data $g_D$ and goes on the right-hand side.
+
 **Neumann** ($D\nabla u \cdot \mathbf{n} = g_N$ on $\Gamma_N$):
 
-The boundary flux integral is replaced directly by the prescribed value. No penalty is needed:
+A Neumann condition prescribes the flux through the boundary rather than the value. The diffusion face flux integral that arose from integration by parts is simply replaced by the prescribed value:
 
 $$
 -\int_{\Gamma_N} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s \longrightarrow -\int_{\Gamma_N} g_N\, v\, \mathrm{d}s
 $$
 
-The homogeneous case $g_N = 0$ is the natural condition and requires no modification.
+No penalty term is needed because we are specifying the gradient, not enforcing a value of $u$. The homogeneous case $g_N = 0$ (zero flux, such as an insulating or symmetry boundary) is the *natural* boundary condition for this formulation: it requires no additional terms at all, and is automatically satisfied if the boundary face integrals are simply omitted.
 
 **Robin** ($D\nabla u \cdot \mathbf{n} = g_R - \beta u$ on $\Gamma_R$, $\beta \geq 0$):
 
-Substituting the Robin condition into the boundary face integral:
+A Robin condition is a linear combination of the flux and the solution value. It arises in heat transfer (convective cooling at a surface) and in mass transfer (surface recombination of species). Substituting the Robin condition into the flux integral splits it into one term depending on $u$ and one depending on the data $g_R$:
 
 $$
--\int_{\Gamma_R} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s = \int_{\Gamma_R} \beta\, u\, v\, \mathrm{d}s - \int_{\Gamma_R} g_R\, v\, \mathrm{d}s
+-\int_{\Gamma_R} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s = \underbrace{\int_{\Gamma_R} \beta\, u\, v\, \mathrm{d}s}_{\text{bilinear form}} - \underbrace{\int_{\Gamma_R} g_R\, v\, \mathrm{d}s}_{\text{linear form}}
 $$
-
-The $\beta u v$ term enters the bilinear form; $g_R v$ moves to the right-hand side.
 
 ### Advection
 
-**Inflow** ($\mathbf{w} \cdot \mathbf{n} < 0$ on $\Gamma_\text{in}$, $u = g_\text{in}$):
+The advection term also produces boundary face integrals, and their treatment depends on whether flow is entering or leaving the domain at each face.
 
-The upwind value is the prescribed inflow data; information enters from outside the domain:
+**Inflow** ($\mathbf{w} \cdot \mathbf{n} < 0$ on $\Gamma_\text{in}$):
+
+The flow is entering the domain, so the upwind value lies *outside* the domain. We prescribe it as $g_\text{in}$, which moves the term to the right-hand side:
 
 $$
-\int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s \quad \text{(RHS only)}
+-\int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s \quad \text{(linear form)}
 $$
 
-Since $\mathbf{w} \cdot \mathbf{n} < 0$ on $\Gamma_\text{in}$, this contributes positively for positive inflow data.
+The minus sign and the fact that $\mathbf{w} \cdot \mathbf{n} < 0$ on $\Gamma_\text{in}$ mean this contributes positively for positive inflow data, which is physically correct: inflow adds concentration to the domain.
 
 **Outflow** ($\mathbf{w} \cdot \mathbf{n} > 0$ on $\Gamma_\text{out}$):
 
-The upwind value is the interior trace $u$; no data needs to be prescribed:
+The flow is leaving the domain, so the upwind value is the interior trace $u$. No data needs to be prescribed; the term enters the bilinear form:
 
 $$
 \int_{\Gamma_\text{out}} (\mathbf{w} \cdot \mathbf{n})\, u\, v\, \mathrm{d}s \quad \text{(bilinear form)}
 $$
 
-This is the natural outflow condition for DG upwinding.
-
 **Wall / Symmetry** ($\mathbf{w} \cdot \mathbf{n} = 0$ on $\Gamma_w$):
 
-No advective flux crosses the boundary. The face integral vanishes, so no term is added for either walls or symmetry planes.
+No advective flux crosses the boundary. The face integral is identically zero, so no term needs to be added.
 
 ## The Complete Weak Formulation
 
-Find $u \in V_h$ such that $a(u, v) = \ell(v)$ for all $v \in V_h$, where:
+Collecting all contributions from the interior and boundary face integrals, the complete problem is: find $u \in V_h$ such that $a(u, v) = \ell(v)$ for all $v \in V_h$, where the *bilinear form* $a$ collects all terms involving the unknown $u$ and the *linear form* $\ell$ collects all terms involving known data.
 
 **Bilinear form**:
 
 $$
-\begin{split}
+\begin{align}
 a(u, v)
-&= \sum_K \int_K D\, \nabla u \cdot \nabla v\, \mathrm{d}x \\
-&\quad - \sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket\, \mathrm{d}s
-   - \sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s
-   + \sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \frac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s \\
-&\quad + \int_{\Gamma_R} \beta\, u\, v\, \mathrm{d}s \\
-&\quad - \sum_K \int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x
-   + \sum_{F \in \mathcal{F}_I} \int_F (\mathbf{w} \cdot \mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket\, \mathrm{d}s
-   + \int_{\Gamma_\text{out}} (\mathbf{w} \cdot \mathbf{n})\, u\, v\, \mathrm{d}s
-\end{split}
+&= \underbrace{\sum_K \int_K D\, \nabla u \cdot \nabla v\, \mathrm{d}x}_{\text{bulk diffusion}} \\
+&\quad - \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{diffusion consistency}} \\
+&\quad - \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s}_{\text{diffusion symmetry}} \\
+&\quad + \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \frac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s}_{\text{diffusion penalty}} \\
+&\quad + \underbrace{\int_{\Gamma_R} \beta\, u\, v\, \mathrm{d}s}_{\text{Robin}} \\
+&\quad - \underbrace{\sum_K \int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x}_{\text{bulk advection}} \\
+&\quad + \underbrace{\sum_{F \in \mathcal{F}_I} \int_F (\mathbf{w} \cdot \mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{interior upwind flux}} \\
+&\quad + \underbrace{\int_{\Gamma_\text{out}} (\mathbf{w} \cdot \mathbf{n})\, u\, v\, \mathrm{d}s}_{\text{outflow BC}}
+\end{align}
 $$
 
 **Linear form**:
 
 $$
-\begin{split}
+\begin{align}
 \ell(v)
-&= \int_\Omega f\, v\, \mathrm{d}x \\
-&\quad - \int_{\Gamma_N} g_N\, v\, \mathrm{d}s
-   - \int_{\Gamma_R} g_R\, v\, \mathrm{d}s \\
-&\quad - \int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, g_D\, \mathrm{d}s
-   + \int_{\Gamma_D} \frac{\alpha D}{h}\, g_D\, v\, \mathrm{d}s \\
-&\quad - \int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s
-\end{split}
+&= \underbrace{\int_\Omega f\, v\, \mathrm{d}x}_{\text{source}} \\
+&\quad - \underbrace{\int_{\Gamma_N} g_N\, v\, \mathrm{d}s}_{\text{Neumann BC}} \\
+&\quad - \underbrace{\int_{\Gamma_R} g_R\, v\, \mathrm{d}s}_{\text{Robin BC}} \\
+&\quad - \underbrace{\int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, g_D\, \mathrm{d}s}_{\text{Dirichlet symmetry}} \\
+&\quad + \underbrace{\int_{\Gamma_D} \frac{\alpha D}{h}\, g_D\, v\, \mathrm{d}s}_{\text{Dirichlet penalty}} \\
+&\quad - \underbrace{\int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s}_{\text{inflow BC}}
+\end{align}
 $$
 
 ## Coupling with an External Velocity Field
 
-The formulation above assumes a velocity field that is either prescribed analytically or represented continuously, divergence-free in the discrete sense, and exactly tangential on walls. When $\mathbf{w}$ is instead supplied by an external solver such as OpenFOAM, each of these assumptions relaxes, and the face integrals need care. The issues divide into three groups.
+The formulation above assumes the velocity field $\mathbf{w}$ is either prescribed analytically or lives in a continuous finite element space, is divergence-free (i.e. $\nabla\cdot\mathbf{w} = 0$) in the discrete sense, and has exactly zero normal component on walls. When $\mathbf{w}$ is supplied by an external solver such as OpenFOAM, each of these assumptions requires care. The issues divide into three groups.
 
 ### Single-valued face flux
 
-OpenFOAM stores its velocity as cell-centred values together with a set of face-normal mass fluxes $\phi_F = \int_F (\rho \mathbf{w}) \cdot \mathbf{n}\,\mathrm{d}s$ that are, by construction, single-valued per face and conservative at the discrete level. Interpolating the cell-centred velocity into a DG space on the transport mesh and reconstructing $\mathbf{w}\cdot\mathbf{n}$ from it loses both properties: the two sides of an interior face disagree, and $\llbracket \mathbf{w}\cdot\mathbf{n} \rrbracket \ne 0$.
+In the interior advection term, we used the compact identity
 
-The compact identity used for the interior advection integral then no longer collapses to an upwind flux. Two equivalent fixes are available:
+$$
+(\mathbf{w} \cdot \mathbf{n})\, u_\text{up} = \langle \mathbf{w} u \rangle \cdot \mathbf{n} + \tfrac{1}{2}|\mathbf{w} \cdot \mathbf{n}|\, \llbracket u \rrbracket
+$$
 
-1. Replace the compact form by an explicit upwind flux that does not rely on single-valuedness of $\mathbf{w}\cdot\mathbf{n}$:
+which assumes $\mathbf{w}\cdot\mathbf{n}$ is the same on both sides of every interior face, i.e. $\llbracket \mathbf{w}\cdot\mathbf{n} \rrbracket = 0$. OpenFOAM satisfies this naturally: it stores face-normal mass fluxes $\phi_F = \int_F (\rho \mathbf{w}) \cdot \mathbf{n}\,\mathrm{d}s$ that are single-valued per face by construction. However, if the cell-centred velocity is interpolated into a DG space on the transport mesh and $\mathbf{w}\cdot\mathbf{n}$ is reconstructed from it, the two sides of each interior face will in general give different values, breaking the identity. Two fixes are available:
+
+1. Replace the compact identity with an explicit upwind flux that does not assume single-valuedness:
    $$
    \hat{f}_\text{adv} = \tfrac{1}{2} \bigl( \mathbf{w}_0\cdot\mathbf{n}\, u_0 + \mathbf{w}_1\cdot\mathbf{n}\, u_1 \bigr)
-   + \tfrac{1}{2} \bigl| \langle \mathbf{w}\rangle\cdot\mathbf{n} \bigr|\, \llbracket u \rrbracket.
+   + \tfrac{1}{2} \bigl| \langle \mathbf{w}\rangle\cdot\mathbf{n} \bigr|\, \llbracket u \rrbracket
    $$
-2. Transfer the face-flux field $\phi_F$ directly from OpenFOAM and use it as the advective transport coefficient on each face, replacing $\mathbf{w}\cdot\mathbf{n}$ by $\phi_F / (\rho\, |F|)$ (or by $\phi_F / |F|$ if a volumetric flux is used). The upwind branch is then selected on the sign of $\phi_F$. This is the option that preserves OpenFOAM's flux conservation and is generally preferred.
+2. Transfer the face-flux field $\phi_F$ directly from OpenFOAM and use it as the advective transport coefficient on each face, replacing $\mathbf{w}\cdot\mathbf{n}$ by $\phi_F / (\rho\, |F|)$ (or by $\phi_F / |F|$ for a volumetric flux). The upwind branch is selected on the sign of $\phi_F$. This option preserves OpenFOAM's flux conservation exactly and is generally preferred.
 
-In either case the boundary face integrals $\int_{\Gamma_\text{in/out}}$ must use the same face flux, not the reconstructed $\mathbf{w}\cdot\mathbf{n}$, so that the inflow and outflow splits remain consistent.
+In either case the boundary face integrals on $\Gamma_\text{in}$ and $\Gamma_\text{out}$ must use the same face flux consistently, not a reconstructed $\mathbf{w}\cdot\mathbf{n}$, so that the inflow and outflow classification remains consistent with the interior treatment.
 
 ### Discrete divergence
 
-The physical field is divergence-free, but the interpolant $\mathbf{w}_h$ on the transport mesh is not, in general. The two forms
+A *divergence-free* velocity field satisfies $\nabla\cdot\mathbf{w} = 0$, meaning there is no net creation or destruction of fluid volume at any point. The physical flow is divergence-free, but an interpolated velocity field $\mathbf{w}_h$ on the transport mesh generally is not. This matters because the two advection forms
 
 $$
 \nabla\cdot(\mathbf{w} u) \quad\text{and}\quad \mathbf{w}\cdot\nabla u
 $$
 
-differ by $(\nabla\cdot\mathbf{w})\, u$, which is zero at the continuum level but acts as a spurious source when $\nabla\cdot\mathbf{w}_h \ne 0$. Two options are available:
+differ by $(\nabla\cdot\mathbf{w})\, u$, which is zero in the continuous problem but acts as a spurious source when $\nabla\cdot\mathbf{w}_h \ne 0$. Two options are available:
 
-- Use the skew-symmetric or non-conservative form $\mathbf{w}\cdot\nabla u$ when deriving the weak form. This trades local conservation for reduced sensitivity to interpolation error in $\mathbf{w}$ and is the pragmatic choice when the velocity is known only approximately.
-- Project $\mathbf{w}$ onto a divergence-conforming space such as Raviart-Thomas or BDM, which preserves $\nabla\cdot\mathbf{w}_h = 0$ at the discrete level. This keeps the conservative form valid but adds a projection step and couples the transport mesh more tightly to the flow discretisation.
+- Use the non-conservative form $\mathbf{w}\cdot\nabla u$ when deriving the weak form. This reduces sensitivity to interpolation error in $\mathbf{w}$ at the cost of losing element-by-element conservation, and is the pragmatic choice when the velocity is known only approximately.
+- Project $\mathbf{w}$ onto a divergence-conforming finite element space (such as Raviart-Thomas or BDM), which enforces $\nabla\cdot\mathbf{w}_h = 0$ exactly at the discrete level. This keeps the conservative form valid but adds a projection step and couples the transport mesh more tightly to the flow discretisation.
 
-When the face-flux form (option 2 above) is used, conservation is enforced through $\phi_F$ directly and this divergence mismatch does not arise in the same way.
+When the face-flux form (option 2 above) is used, conservation is enforced through $\phi_F$ directly and this divergence issue does not arise in the same way.
 
 ### Wall boundary flux
 
-On no-slip or symmetry walls the physical condition is $\mathbf{w}\cdot\mathbf{n} = 0$, and the corresponding face integral vanishes. An interpolated velocity field rarely satisfies this exactly: a small residual normal component acts as a spurious inflow or outflow, with the sign and magnitude depending on the interpolation. The safest treatment is to enforce $\mathbf{w}\cdot\mathbf{n} = 0$ explicitly on wall facets, either by masking the integrand or by using the face-flux field $\phi_F$, which is identically zero on OpenFOAM wall patches and therefore introduces no leak.
+On no-slip or symmetry walls the physical condition is $\mathbf{w}\cdot\mathbf{n} = 0$, and the corresponding advection face integral vanishes. An interpolated velocity field rarely satisfies this exactly, and a small residual normal component acts as a spurious inflow or outflow. The safest fix is to enforce $\mathbf{w}\cdot\mathbf{n} = 0$ explicitly on wall faces, either by zeroing the integrand or by using the face-flux field $\phi_F$, which is identically zero on OpenFOAM wall patches and therefore introduces no spurious flux.
 
 ### Mesh transfer
 
-All of the above assumes that values defined on the OpenFOAM mesh have been transferred to the transport mesh. Mesh-to-mesh interpolation is itself a source of error, particularly at boundaries and in regions with large velocity gradients, and its treatment is outside the scope of this note. For the purposes of this formulation, we assume that either a face-flux field $\phi_F$ or a cell-centred velocity has been made available on the transport mesh by a method appropriate to the coupling.
+All of the above assumes that velocity data defined on the OpenFOAM mesh has already been transferred to the transport mesh. Mesh-to-mesh interpolation is itself a source of error, particularly near boundaries and in regions with large velocity gradients, and its treatment is outside the scope of this document. We assume that either a face-flux field $\phi_F$ or a cell-centred velocity field has been made available on the transport mesh by an appropriate interpolation method.
 
 ## Further Reading
-
-- Arnold et al. (2002), *Unified analysis of discontinuous Galerkin methods for elliptic problems*, SIAM J. Numer. Anal.
-- Di Pietro & Ern (2012), *Mathematical Aspects of Discontinuous Galerkin Methods*, Springer
-- [DOLFINx documentation](https://docs.fenicsproject.org/dolfinx/main/python/)
