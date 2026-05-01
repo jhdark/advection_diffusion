@@ -62,105 +62,116 @@ The trade-off is a larger global system (DG has more degrees of freedom than CG 
 
 ### Notation
 
-Let $\mathcal{T}_h = \{K\}$ be a triangulation of $\Omega$, and let $\mathcal{F}_I$ and $\mathcal{F}_B$ denote the sets of interior and boundary faces. The DG trial and test space is:
+The domain $\Omega$ is divided into a *mesh* $\mathcal{T}_h = \{K\}$: a collection of non-overlapping elements $K$, triangles in 2D or tetrahedra in 3D, that together cover $\Omega$. The subscript $h$ refers to the typical element size.
+
+Within this mesh, every shared boundary between two adjacent elements is an *interior face*. The set of all interior faces is $\mathcal{F}_I$, and the set of faces on the outer boundary of $\Omega$ is $\mathcal{F}_B$.
+
+In DG, the approximate solution is allowed to be a different polynomial on each element and may be discontinuous across element boundaries. The *function space* that encodes this is:
 
 $$
 V_h = \{v \in L^2(\Omega) : v|_K \in \mathbb{P}_p(K),\ \forall K \in \mathcal{T}_h\}
 $$
 
-For an interior face $F \in \mathcal{F}_I$ shared by elements $K_0$ and $K_1$, let $\mathbf{n} = \mathbf{n}_0$ be the outward unit normal from $K_0$. We define the average and jump operators for a scalar $q$ and vector $\boldsymbol{\tau}$ as:
+This says: $V_h$ contains all functions that, when restricted to any element $K$, are a polynomial of degree at most $p$, with no continuity requirement between elements.
+
+Because solutions in $V_h$ can be discontinuous, each interior face $F \in \mathcal{F}_I$ has *two* values, one from each neighbouring element $K_0$ and $K_1$. Let $\mathbf{n} = \mathbf{n}_0$ be the outward unit normal from $K_0$ (pointing into $K_1$). For a quantity $q$ with values $q_0$ and $q_1$ on each side, we define the **average** and **jump** operators:
 
 $$
-\langle q \rangle := \frac{q_0 + q_1}{2}, \qquad \llbracket q \rrbracket := q_0 - q_1
+\langle q \rangle := \frac{q_0 + q_1}{2} \quad \text{(average)}, \qquad \llbracket q \rrbracket := q_0 - q_1 \quad \text{(jump)}
 $$
+
+The average is the mean value across the face; the jump measures the size of the discontinuity, which is zero if the solution is continuous at that face. For a vector $\boldsymbol{\tau}$:
 
 $$
 \langle \boldsymbol{\tau} \rangle := \frac{\boldsymbol{\tau}_0 + \boldsymbol{\tau}_1}{2}, \qquad \llbracket \boldsymbol{\tau} \rrbracket := \boldsymbol{\tau}_0 \cdot \mathbf{n}_0 + \boldsymbol{\tau}_1 \cdot \mathbf{n}_1
 $$
 
-Note that $\llbracket \boldsymbol{\tau} \rrbracket = (\boldsymbol{\tau}_0 - \boldsymbol{\tau}_1) \cdot \mathbf{n}$ is the scalar normal jump of a vector, while $\llbracket q \rrbracket = q_0 - q_1$ is the scalar jump of $q$ oriented with $\mathbf{n}$. On a boundary face there is a single element, so $\langle q \rangle = q$ and $\llbracket q \rrbracket = q$.
+where $\llbracket \boldsymbol{\tau} \rrbracket = (\boldsymbol{\tau}_0 - \boldsymbol{\tau}_1) \cdot \mathbf{n}$ is the scalar normal jump. On a boundary face there is only one element, so $\langle q \rangle = q$ and $\llbracket q \rrbracket = q$.
 
-### Element-wise Integration by Parts
+### From Strong Form to Weak Form
 
-Multiply the strong form by $v \in V_h$ and integrate over a single element $K$:
+The *strong form* of the PDE is an equation that must hold pointwise everywhere in $\Omega$, requiring $u$ to be smooth enough to be differentiated twice. On a mesh where the solution can be discontinuous, this is too strict.
+
+The *weak form* relaxes this by multiplying the PDE by a *test function* $v$ and integrating over the domain. Rather than demanding the equation hold at every point, we demand it holds in an average sense against every possible $v$. The test function is chosen from the same space $V_h$ as the solution, which is called the *Galerkin* approach.
+
+We derive the weak form element by element. Multiplying by $v$ and integrating over a single element $K$ gives:
 
 $$
 \int_K \nabla \cdot (\mathbf{w} u)\, v\, \mathrm{d}x - \int_K \nabla \cdot (D\nabla u)\, v\, \mathrm{d}x = \int_K f\, v\, \mathrm{d}x
 $$
 
-Applying the divergence theorem to each term separately:
+Applying the *divergence theorem* (the multi-dimensional analogue of integration by parts) moves one derivative off $u$ and onto $v$, reducing the smoothness requirement on $u$. It also produces boundary integrals on $\partial K$, which represent the flux of information through the faces of element $K$:
 
 $$
-\begin{split}
-&-\int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x + \int_{\partial K} (\mathbf{w} \cdot \mathbf{n}_K)\, u\, v\, \mathrm{d}s \\
-&+ \int_K D\nabla u \cdot \nabla v\, \mathrm{d}x - \int_{\partial K} D(\nabla u \cdot \mathbf{n}_K)\, v\, \mathrm{d}s = \int_K f\, v\, \mathrm{d}x
-\end{split}
+\begin{align}
+&\underbrace{-\int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x}_{\text{advection, bulk}}
++ \underbrace{\int_{\partial K} (\mathbf{w} \cdot \mathbf{n}_K)\, u\, v\, \mathrm{d}s}_{\text{advection, face flux}} \\
+&+ \underbrace{\int_K D\nabla u \cdot \nabla v\, \mathrm{d}x}_{\text{diffusion, bulk}}
+- \underbrace{\int_{\partial K} D(\nabla u \cdot \mathbf{n}_K)\, v\, \mathrm{d}s}_{\text{diffusion, face flux}}
+= \int_K f\, v\, \mathrm{d}x
+\end{align}
 $$
 
-Summing over all elements $K \in \mathcal{T}_h$ and assembling the $\partial K$ integrals across shared faces using the average and jump operators yields the global weak form.
+To form the global problem we sum over all elements $K \in \mathcal{T}_h$. The face integrals on $\partial K$ are shared between neighbouring elements and must be assembled carefully using the average and jump operators. The treatment of the advection and diffusion face terms differs, and is described in the two sections below.
 
 ### Diffusion Term: SIPG
 
-The assembly identity for the diffusion boundary integrals gives:
+When we sum the diffusion face integrals over all elements, each interior face $F$ is counted twice, once from each side. Using the average and jump operators this collapses to:
+
+$$
+\sum_K \int_{\partial K} D(\nabla u \cdot \mathbf{n}_K)\, v\, \mathrm{d}s
+= \sum_{F \in \mathcal{F}_I} \int_F \left( \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket + \llbracket D\nabla u \rrbracket\, \langle v \rangle \right) \mathrm{d}s
++ \sum_{F \in \mathcal{F}_B} \int_F D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s
+$$
+
+For a smooth exact solution, the normal gradient is the same on both sides of every face, so $\llbracket D\nabla u \rrbracket = 0$ and the second interior term vanishes. We can drop it without changing which solutions satisfy the equations, a property called *consistency*. After dropping it, however, the resulting form is not symmetric (i.e. $a(u,v) \ne a(v,u)$) and is not yet stable. The Symmetric Interior Penalty Galerkin (SIPG) method adds two further face terms to fix both issues:
 
 $$
 \begin{align}
-    \sum_K \int_{\partial K} D(\nabla u \cdot \mathbf{n}_K)\, v\, \mathrm{d}s
-    = &\sum_{F \in \mathcal{F}_I} \int_F \left( \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket
-    + \llbracket D\nabla u \rrbracket\, \langle v \rangle \right) \mathrm{d}s \\
-    &+ \sum_{F \in \mathcal{F}_B} \int_F D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s
+a_\text{diff}(u, v)
+&= \underbrace{\sum_K \int_K D\, \nabla u \cdot \nabla v\, \mathrm{d}x}_{\text{bulk diffusion}} \\
+&\quad - \underbrace{\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{consistency}} \\
+&\quad - \underbrace{\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s}_{\text{symmetry}} \\
+&\quad + \underbrace{\sum_{F \in \mathcal{F}_I} \int_F \frac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s}_{\text{penalty}}
 \end{align}
 $$
 
-In the continuous setting the normal flux of a smooth solution is single-valued, so $\llbracket D\nabla u \rrbracket = 0$ and the second interior face term can be dropped from the bilinear form without compromising consistency, since it vanishes exactly when the true solution is substituted. In the discrete setting $u_h$ is genuinely discontinuous and $\llbracket D\nabla u_h \rrbracket$ is not zero in general, so omitting this term does modify the discrete system; stability is recovered through the penalty contribution introduced below, rather than by any smoothness of $u_h$. Subtracting the remaining single-valued flux term from the element-wise bulk integrals gives a consistent but non-symmetric form. SIPG adds two further face contributions to restore symmetry and coercivity:
+The role of each term:
 
-1. **Symmetry**: $-\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s$, which is zero for the exact solution (consistency preserved) and symmetrises the bilinear form.
-2. **Penalty**: $+\displaystyle\sum_{F \in \mathcal{F}_I} \int_F \dfrac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s$, which penalises inter-element jumps and restores coercivity.
-
-The interior SIPG bilinear form is therefore:
-
-$$
-\begin{align}
-a_\text{diff}^\text{int}(u, v)
-&= \sum_K \int_K D\, \nabla u \cdot \nabla v\, \mathrm{d}x \\
-&\quad - \sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket\, \mathrm{d}s
-   - \sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s \\
-&\quad + \sum_{F \in \mathcal{F}_I} \int_F \frac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s
-\end{align}
-$$
-
-The penalty parameter $\alpha = Cp^2$ (with $C \sim 10$ and $p$ the polynomial degree) must exceed a threshold that depends on the element geometry.
+- **Bulk diffusion**: the standard $\int D\nabla u \cdot \nabla v$ integral, identical to standard Galerkin for pure diffusion.
+- **Consistency**: the face flux term from integration by parts. It vanishes when the exact solution is substituted, so it does not change which solutions the equations accept.
+- **Symmetry**: the consistency term with $u$ and $v$ swapped. It is also zero for the exact solution, but its presence makes $a(u,v) = a(v,u)$, which is required for a well-posed system.
+- **Penalty**: penalises the size of the jump $\llbracket u \rrbracket$ across interior faces. This prevents the solution from becoming arbitrarily discontinuous and ensures the method is *coercive*, meaning the bilinear form is bounded away from zero, which guarantees stability. The penalty parameter is $\alpha = Cp^2$ (with $C \sim 10$ and $p$ the polynomial degree); it must be chosen large enough for stability, but not so large that it over-constrains the solution.
 
 ### Advection Term: Upwind Flux
 
-After summing over elements, the advection face integrals over an interior face $F$ (with normal $\mathbf{n} = \mathbf{n}_0$) yield:
+When the advection face integrals are summed over all elements, each interior face $F$ produces a term involving $u$ evaluated from both sides. Since $u$ is discontinuous, we must choose which value to use, and this is where upwinding is applied.
+
+The *upwind value* of $u$ on face $F$ is:
 
 $$
-\int_F (\mathbf{w} \cdot \mathbf{n})\bigl(u_0\, v_0 - u_1\, v_1\bigr)\, \mathrm{d}s
+u_\text{up} = \begin{cases} u_0 & \text{if } \mathbf{w} \cdot \mathbf{n} > 0 \quad (\text{flow from } K_0 \text{ to } K_1) \\ u_1 & \text{if } \mathbf{w} \cdot \mathbf{n} \leq 0 \quad (\text{flow from } K_1 \text{ to } K_0) \end{cases}
 $$
 
-Since $u$ is multi-valued on $F$, we replace it with the upwind value:
-
-$$
-u_\text{up} = \begin{cases} u_0 & \text{if } \mathbf{w} \cdot \mathbf{n} > 0 \\ u_1 & \text{if } \mathbf{w} \cdot \mathbf{n} \leq 0 \end{cases}
-$$
-
-which can be written compactly as:
+Always take $u$ from the element the flow is coming *from*. This is the DG implementation of the upwinding principle, and it can be written compactly as:
 
 $$
 (\mathbf{w} \cdot \mathbf{n})\, u_\text{up} = \langle \mathbf{w} u \rangle \cdot \mathbf{n} + \tfrac{1}{2}|\mathbf{w} \cdot \mathbf{n}|\, \llbracket u \rrbracket
 $$
 
-The face integral then becomes $(\mathbf{w}\cdot\mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket$, where $\llbracket v \rrbracket = v_0 - v_1$ is the oriented scalar jump of the test function.
-
-The compact identity above assumes that $\mathbf{w}\cdot\mathbf{n}$ is single-valued on $F$, i.e. $\llbracket \mathbf{w}\cdot\mathbf{n} \rrbracket = 0$. This holds whenever $\mathbf{w}$ is prescribed analytically or is represented in a continuous finite element space, but it fails in general for a velocity field interpolated from an external solver into a DG space. The practical consequences, and how to handle them, are discussed in the section on coupling with an external velocity field.
-
-The interior advection contribution is:
+The interior advection contribution is then:
 
 $$
-a_\text{adv}^\text{int}(u, v) = -\sum_K \int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x
-+ \sum_{F \in \mathcal{F}_I} \int_F (\mathbf{w} \cdot \mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket\, \mathrm{d}s
+\begin{align}
+a_\text{adv}(u, v)
+&= \underbrace{-\sum_K \int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x}_{\text{bulk advection}} \\
+&\quad + \underbrace{\sum_{F \in \mathcal{F}_I} \int_F (\mathbf{w} \cdot \mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{interior upwind flux}}
+\end{align}
 $$
+
+The **bulk advection** term moves information within each element; the **interior upwind flux** passes information between elements using the upstream value. Together they give DG its natural stability for advection without any additional tuning parameter.
+
+Note: the compact identity for $u_\text{up}$ assumes $\mathbf{w}\cdot\mathbf{n}$ is single-valued on $F$. This holds when $\mathbf{w}$ is prescribed analytically or lives in a continuous FE space, but requires care when the velocity is interpolated from an external solver, as discussed in the section on coupling with an external velocity field.
 
 Boundary contributions depend on the flow direction and are treated in the next section.
 
