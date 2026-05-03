@@ -124,11 +124,11 @@ $$
 + \sum_{F \in \mathcal{F}_B} \int_F D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s
 $$
 
-For a smooth exact solution, the normal gradient is the same on both sides of every face, so $\llbracket D\nabla u \rrbracket = 0$ and the second interior term vanishes. We can drop it without changing which solutions satisfy the equations, a property called *consistency*. After dropping it, however, the resulting form is not symmetric (i.e. $a(u,v) \ne a(v,u)$) and is not yet stable. The Symmetric Interior Penalty Galerkin (SIPG) method adds two further face terms to fix both issues:
+For a smooth exact solution, the normal gradient is the same on both sides of every face, so $\llbracket D\nabla u \rrbracket = 0$ and the second interior term vanishes. We can drop it without changing which solutions satisfy the equations, a property called *consistency*. After dropping it, however, the resulting form is not symmetric and is not yet stable. The Symmetric Interior Penalty Galerkin (SIPG) method adds two further face terms to fix both issues:
 
 $$
 \begin{align}
-a_\text{diff}(u, v)
+F_\text{diff}(u; v)
 &= \underbrace{\sum_K \int_K D\, \nabla u \cdot \nabla v\, \mathrm{d}x}_{\text{bulk diffusion}} \\
 &\quad - \underbrace{\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{consistency}} \\
 &\quad - \underbrace{\sum_{F \in \mathcal{F}_I} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s}_{\text{symmetry}} \\
@@ -140,8 +140,8 @@ The role of each term:
 
 - **Bulk diffusion**: the standard $\int D\nabla u \cdot \nabla v$ integral, identical to standard Galerkin for pure diffusion.
 - **Consistency**: the face flux term from integration by parts. It vanishes when the exact solution is substituted, so it does not change which solutions the equations accept.
-- **Symmetry**: the consistency term with $u$ and $v$ swapped. It is also zero for the exact solution, but its presence makes $a(u,v) = a(v,u)$, which is required for a well-posed system.
-- **Penalty**: penalises the size of the jump $\llbracket u \rrbracket$ across interior faces. This prevents the solution from becoming arbitrarily discontinuous and ensures the method is *coercive*, meaning the bilinear form is bounded away from zero, which guarantees stability. The penalty parameter is $\alpha = Cp^2$ (with $C \sim 10$ and $p$ the polynomial degree); it must be chosen large enough for stability, but not so large that it over-constrains the solution.
+- **Symmetry**: the consistency term with $u$ and $v$ swapped. It is also zero for the exact solution, but its presence symmetrises the formulation, which is needed for a well-posed system.
+- **Penalty**: penalises the size of the jump $\llbracket u \rrbracket$ across interior faces. This prevents the solution from becoming arbitrarily discontinuous and ensures the method is *coercive*, meaning the residual is bounded away from zero, which guarantees stability. The penalty parameter is $\alpha = Cp^2$ (with $C \sim 10$ and $p$ the polynomial degree); it must be chosen large enough for stability, but not so large that it over-constrains the solution.
 
 ### Advection Term: Upwind Flux
 
@@ -163,7 +163,7 @@ The interior advection contribution is then:
 
 $$
 \begin{align}
-a_\text{adv}(u, v)
+F_\text{adv}(u; v)
 &= \underbrace{-\sum_K \int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x}_{\text{bulk advection}} \\
 &\quad + \underbrace{\sum_{F \in \mathcal{F}_I} \int_F (\mathbf{w} \cdot \mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{interior upwind flux}}
 \end{align}
@@ -183,21 +183,18 @@ Each type of boundary condition enters the formulation by modifying the face int
 
 **Dirichlet** ($u = g_D$ on $\Gamma_D$):
 
-A Dirichlet condition prescribes the solution value directly. In a classical finite element method this would mean enforcing $u = g_D$ at shared nodes. In DG, where there are no shared nodes between elements, the condition is instead imposed *weakly* through the face integrals, by treating the boundary face exactly like an interior SIPG face but with $g_D$ playing the role of the solution on the outside:
+A Dirichlet condition prescribes the solution value directly. In a classical finite element method this would mean enforcing $u = g_D$ at shared nodes. In DG, where there are no shared nodes between elements, the condition is instead imposed *weakly* through the face integrals, by treating the boundary face exactly like an interior SIPG face but with $g_D$ playing the role of the solution on the outside. Written as a residual contribution in terms of the error $(u - g_D)$:
 
 $$
 \begin{align}
-a_\text{diff}^D(u, v)
+F_\text{diff}^D(u; v)
 &= \underbrace{- \int_{\Gamma_D} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s}_{\text{flux consistency}} \\
-&\quad - \underbrace{\int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, u\, \mathrm{d}s}_{\text{symmetry}} \\
-&\quad + \underbrace{\int_{\Gamma_D} \frac{\alpha D}{h}\, u\, v\, \mathrm{d}s}_{\text{penalty}} \\[6pt]
-\ell_\text{diff}^D(v)
-&= \underbrace{- \int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, g_D\, \mathrm{d}s}_{\text{symmetry (data)}} \\
-&\quad + \underbrace{\int_{\Gamma_D} \frac{\alpha D}{h}\, g_D\, v\, \mathrm{d}s}_{\text{penalty (data)}}
+&\quad - \underbrace{\int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, (u - g_D)\, \mathrm{d}s}_{\text{symmetry}} \\
+&\quad + \underbrace{\int_{\Gamma_D} \frac{\alpha D}{h}\, (u - g_D)\, v\, \mathrm{d}s}_{\text{penalty}}
 \end{align}
 $$
 
-The bilinear form $a_\text{diff}^D$ contains terms involving the unknown $u$ and goes on the left-hand side; the linear form $\ell_\text{diff}^D$ contains the known data $g_D$ and goes on the right-hand side.
+When $u = g_D$ exactly, the symmetry and penalty terms vanish and only the flux consistency term remains, confirming the condition is satisfied.
 
 **Neumann** ($D\nabla u \cdot \mathbf{n} = g_N$ on $\Gamma_N$):
 
@@ -214,7 +211,7 @@ No penalty term is needed because we are specifying the gradient, not enforcing 
 A Robin condition is a linear combination of the flux and the solution value. It arises in heat transfer (convective cooling at a surface) and in mass transfer (surface recombination of species). Substituting the Robin condition into the flux integral splits it into one term depending on $u$ and one depending on the data $g_R$:
 
 $$
--\int_{\Gamma_R} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s = \underbrace{\int_{\Gamma_R} \beta\, u\, v\, \mathrm{d}s}_{\text{bilinear form}} - \underbrace{\int_{\Gamma_R} g_R\, v\, \mathrm{d}s}_{\text{linear form}}
+-\int_{\Gamma_R} D(\nabla u \cdot \mathbf{n})\, v\, \mathrm{d}s = \underbrace{\int_{\Gamma_R} \beta\, u\, v\, \mathrm{d}s}_{u\text{-dependent}} - \underbrace{\int_{\Gamma_R} g_R\, v\, \mathrm{d}s}_{\text{data}}
 $$
 
 ### Advection
@@ -226,17 +223,17 @@ The advection term also produces boundary face integrals, and their treatment de
 The flow is entering the domain, so the upwind value lies *outside* the domain. We prescribe it as $g_\text{in}$, which moves the term to the right-hand side:
 
 $$
--\int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s \quad \text{(linear form)}
+-\int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s \quad \text{(data term)}
 $$
 
 The minus sign and the fact that $\mathbf{w} \cdot \mathbf{n} < 0$ on $\Gamma_\text{in}$ mean this contributes positively for positive inflow data, which is physically correct: inflow adds concentration to the domain.
 
 **Outflow** ($\mathbf{w} \cdot \mathbf{n} > 0$ on $\Gamma_\text{out}$):
 
-The flow is leaving the domain, so the upwind value is the interior trace $u$. No data needs to be prescribed; the term enters the bilinear form:
+The flow is leaving the domain, so the upwind value is the interior trace $u$. No data needs to be prescribed; the term is $u$-dependent and enters the residual as:
 
 $$
-\int_{\Gamma_\text{out}} (\mathbf{w} \cdot \mathbf{n})\, u\, v\, \mathrm{d}s \quad \text{(bilinear form)}
+\int_{\Gamma_\text{out}} (\mathbf{w} \cdot \mathbf{n})\, u\, v\, \mathrm{d}s \quad (u\text{-dependent})
 $$
 
 **Wall / Symmetry** ($\mathbf{w} \cdot \mathbf{n} = 0$ on $\Gamma_w$):
@@ -245,37 +242,30 @@ No advective flux crosses the boundary. The face integral is identically zero, s
 
 ## The Complete Weak Formulation
 
-Collecting all contributions from the interior and boundary face integrals, the complete problem is: find $u \in V_h$ such that $a(u, v) = \ell(v)$ for all $v \in V_h$, where the *bilinear form* $a$ collects all terms involving the unknown $u$ and the *linear form* $\ell$ collects all terms involving known data.
+In practice, FESTIM uses a nonlinear solver (Newton/SNES) even for problems that are formally linear, so the formulation is assembled as a single *residual* $F(u; v)$ rather than as separate bilinear and linear forms. This has the added benefit that the same formulation extends directly to nonlinear problems, for example with a concentration-dependent diffusivity $D(u)$ or a nonlinear boundary flux, without any structural change.
 
-**Bilinear form**:
+The residual form of the problem is: find $u \in V_h$ such that $F(u; v) = 0$ for all $v \in V_h$, where $F$ is the sum of all contributions derived above:
 
 $$
 \begin{align}
-a(u, v)
+F(u; v)
 &= \underbrace{\sum_K \int_K D\, \nabla u \cdot \nabla v\, \mathrm{d}x}_{\text{bulk diffusion}} \\
 &\quad - \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \langle D\nabla u \rangle \cdot \mathbf{n}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{diffusion consistency}} \\
-&\quad - \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u \rrbracket\, \mathrm{d}s}_{\text{diffusion symmetry}} \\
-&\quad + \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \frac{\alpha D}{h}\, \llbracket u \rrbracket \llbracket v \rrbracket\, \mathrm{d}s}_{\text{diffusion penalty}} \\
+&\quad - \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \langle D\nabla v \rangle \cdot \mathbf{n}\, \llbracket u - g_D \rrbracket\, \mathrm{d}s}_{\text{diffusion symmetry}} \\
+&\quad + \underbrace{\sum_{F \in \mathcal{F}_I \cup \Gamma_D} \int_F \frac{\alpha D}{h}\, \llbracket u - g_D \rrbracket \llbracket v \rrbracket\, \mathrm{d}s}_{\text{diffusion penalty}} \\
 &\quad + \underbrace{\int_{\Gamma_R} \beta\, u\, v\, \mathrm{d}s}_{\text{Robin}} \\
 &\quad - \underbrace{\sum_K \int_K (\mathbf{w} u) \cdot \nabla v\, \mathrm{d}x}_{\text{bulk advection}} \\
 &\quad + \underbrace{\sum_{F \in \mathcal{F}_I} \int_F (\mathbf{w} \cdot \mathbf{n})\, u_\text{up}\, \llbracket v \rrbracket\, \mathrm{d}s}_{\text{interior upwind flux}} \\
-&\quad + \underbrace{\int_{\Gamma_\text{out}} (\mathbf{w} \cdot \mathbf{n})\, u\, v\, \mathrm{d}s}_{\text{outflow BC}}
-\end{align}
-$$
-
-**Linear form**:
-
-$$
-\begin{align}
-\ell(v)
-&= \underbrace{\int_\Omega f\, v\, \mathrm{d}x}_{\text{source}} \\
+&\quad + \underbrace{\int_{\Gamma_\text{out}} (\mathbf{w} \cdot \mathbf{n})\, u\, v\, \mathrm{d}s}_{\text{outflow BC}} \\
+&\quad - \underbrace{\int_\Omega f\, v\, \mathrm{d}x}_{\text{source}} \\
 &\quad - \underbrace{\int_{\Gamma_N} g_N\, v\, \mathrm{d}s}_{\text{Neumann BC}} \\
 &\quad - \underbrace{\int_{\Gamma_R} g_R\, v\, \mathrm{d}s}_{\text{Robin BC}} \\
-&\quad - \underbrace{\int_{\Gamma_D} D(\nabla v \cdot \mathbf{n})\, g_D\, \mathrm{d}s}_{\text{Dirichlet symmetry}} \\
-&\quad + \underbrace{\int_{\Gamma_D} \frac{\alpha D}{h}\, g_D\, v\, \mathrm{d}s}_{\text{Dirichlet penalty}} \\
-&\quad - \underbrace{\int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s}_{\text{inflow BC}}
+&\quad - \underbrace{\int_{\Gamma_\text{in}} (\mathbf{w} \cdot \mathbf{n})\, g_\text{in}\, v\, \mathrm{d}s}_{\text{inflow BC}} \\[4pt]
+&= 0
 \end{align}
 $$
+
+On interior faces the jump $\llbracket u - g_D \rrbracket = \llbracket u \rrbracket$ since $g_D = 0$ there; on $\Gamma_D$ faces it reduces to $(u - g_D)$, penalising the departure from the prescribed value.
 
 ## Coupling with an External Velocity Field
 
