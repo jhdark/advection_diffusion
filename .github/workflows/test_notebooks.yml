@@ -1,6 +1,6 @@
 name: Test Notebooks
 
-on: [pull_request, push]
+on: [push]
 
 jobs:
   test-notebooks:
@@ -11,16 +11,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
-    - name: Set up Conda
-      uses: conda-incubator/setup-miniconda@v4
+    - name: Set up environment
+      uses: mamba-org/setup-micromamba@v2
       with:
-        activate-environment: adv-diff
         environment-file: environment.yml
-        miniforge-version: latest
-        channels: conda-forge
+        cache-environment: true
+        init-shell: bash
 
     - name: Execute notebooks
-      shell: bash -l {0}
+      shell: bash -el {0}
       run: |
         jupyter nbconvert --to notebook --execute \
           --ExecutePreprocessor.timeout=600 \
