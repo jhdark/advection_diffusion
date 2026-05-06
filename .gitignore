@@ -209,3 +209,9 @@ __marimo__/
 _build/
 
 .vscode/
+.claude/
+*.bp
+*.h5
+*.xdmf
+*.svg
+testing/
