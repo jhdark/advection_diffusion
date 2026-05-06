@@ -54,14 +54,14 @@ project:
       city: Cambridge
       country: United Kingdom
       postal_code: CB2 1PZ
-  banner: ./images/banner.png
+  banner: ./assets/banner.png
   toc:
     - file: paper
-    - file: notebooks/mwe_1.ipynb
-    - file: notebooks/mwe_2.ipynb
-    - file: notebooks/mwe_3.ipynb
+    - file: notebooks/example_1/mwe_1.ipynb
+    - file: notebooks/example_2/mwe_2.ipynb
+    - file: notebooks/example_3/mwe_3.ipynb
 site:
   title: 'Advection diffusion'
   template: article-theme
   options:
-    favicon: images/festim_logo_symbol.svg
+    favicon: assets/festim_logo_symbol.svg
