@@ -282,10 +282,12 @@ $$
 which assumes $\mathbf{w}\cdot\mathbf{n}$ is the same on both sides of every interior face, i.e. $\llbracket \mathbf{w}\cdot\mathbf{n} \rrbracket = 0$. OpenFOAM satisfies this naturally: it stores face-normal mass fluxes $\phi_F = \int_F (\rho \mathbf{w}) \cdot \mathbf{n}\,\mathrm{d}s$ that are single-valued per face by construction. However, if the cell-centred velocity is interpolated into a DG space on the transport mesh and $\mathbf{w}\cdot\mathbf{n}$ is reconstructed from it, the two sides of each interior face will in general give different values, breaking the identity. Two fixes are available:
 
 1. Replace the compact identity with an explicit upwind flux that does not assume single-valuedness:
+
    $$
    \hat{f}_\text{adv} = \tfrac{1}{2} \bigl( \mathbf{w}_0\cdot\mathbf{n}\, u_0 + \mathbf{w}_1\cdot\mathbf{n}\, u_1 \bigr)
    + \tfrac{1}{2} \bigl| \langle \mathbf{w}\rangle\cdot\mathbf{n} \bigr|\, \llbracket u \rrbracket
    $$
+
 2. Transfer the face-flux field $\phi_F$ directly from OpenFOAM and use it as the advective transport coefficient on each face, replacing $\mathbf{w}\cdot\mathbf{n}$ by $\phi_F / (\rho\, |F|)$ (or by $\phi_F / |F|$ for a volumetric flux). The upwind branch is selected on the sign of $\phi_F$. This option preserves OpenFOAM's flux conservation exactly and is generally preferred.
 
 In either case the boundary face integrals on $\Gamma_\text{in}$ and $\Gamma_\text{out}$ must use the same face flux consistently, not a reconstructed $\mathbf{w}\cdot\mathbf{n}$, so that the inflow and outflow classification remains consistent with the interior treatment.
