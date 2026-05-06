@@ -17,4 +17,5 @@ dependencies:
       - "mystmd"
       - pyvista
       - io4dolfinx
+      - foam2dolfinx
       - scipy
