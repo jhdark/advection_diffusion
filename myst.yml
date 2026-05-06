@@ -60,6 +60,7 @@ project:
     - file: notebooks/example_1/mwe_1.ipynb
     - file: notebooks/example_2/mwe_2.ipynb
     - file: notebooks/example_3/mwe_3.ipynb
+    - file: notebooks/example_4/mwe_4.ipynb
 site:
   title: 'Advection diffusion'
   template: article-theme
