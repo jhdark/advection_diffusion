@@ -8,8 +8,9 @@ Reference notes for implementing a discontinuous Galerkin (DG) advection-diffusi
 ## Contents
 
 - [**paper.md**](paper.md) — derivation of the DG weak form, discussion of CG stabilisation methods, and the complete formulation with boundary conditions
-- [**notebooks/mwe_1.ipynb**](notebooks/mwe_1.ipynb) — MMS verification on the unit square: step-by-step assembly of the weak form in DOLFINx, solution comparison against the exact solution, and mesh/degree convergence tests
-- [**notebooks/mwe_2.ipynb**](notebooks/mwe_2.ipynb) — further examples
+- [**notebooks/example_1/mwe_1.ipynb**](notebooks/example_1/mwe_1.ipynb) — MMS verification on the unit square: step-by-step assembly of the weak form in DOLFINx, solution comparison against the exact solution, and mesh/degree convergence tests
+- [**notebooks/example_2/mwe_2.ipynb**](notebooks/example_2/mwe_2.ipynb) — pipe flow with a half-Poiseuille velocity profile and a uniform volumetric source: boundary condition tagging, mass balance verification via consistent fluxes, and a Péclet number sweep showing the transition from diffusion-dominated to advection-dominated transport
+- [**notebooks/example_3/mwe_3.ipynb**](notebooks/example_3/mwe_3.ipynb) — Stokes flow in a box geometry meshed in SALOME: Taylor-Hood Stokes solve to obtain a divergence-free velocity field, checkpoint-based coupling to the advection-diffusion solver, and flux balance verification on a non-trivial flow path
 
 ## Getting Started
 

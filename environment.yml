@@ -12,6 +12,9 @@ dependencies:
   - nodejs
   - pip>=20.1
   - meshio
+  - adios4dolfinx
   - pip:
       - "mystmd"
       - pyvista
+      - io4dolfinx
+      - scipy
