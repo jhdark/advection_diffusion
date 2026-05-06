@@ -44,13 +44,3 @@ def convert_med_to_xdmf(
             )
 
     return correspondance_dict, cell_data_types
-
-
-med_file = "box_mesh.med"
-
-corr_dict, cell_types = convert_med_to_xdmf(
-    med_file=med_file, cell_type="triangle", facet_type="line"
-)
-
-print(corr_dict)
-print(cell_types)
