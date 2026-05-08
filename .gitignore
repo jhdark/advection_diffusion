@@ -213,7 +213,7 @@ _build/
 *.bp
 *.h5
 *.xdmf
-*.svg
+# *.svg
 testing/
 
 notebooks/example_4/foam_data/
