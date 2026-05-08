@@ -215,3 +215,5 @@ _build/
 *.xdmf
 *.svg
 testing/
+
+notebooks/example_4/foam_data/

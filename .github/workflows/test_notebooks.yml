@@ -33,3 +33,7 @@ jobs:
           --ExecutePreprocessor.timeout=600 \
           --ExecutePreprocessor.kernel_name=python3 \
           notebooks/example_3/mwe_3.ipynb
+        jupyter nbconvert --to notebook --execute \
+          --ExecutePreprocessor.timeout=600 \
+          --ExecutePreprocessor.kernel_name=python3 \
+          notebooks/example_4/mwe_4.ipynb
